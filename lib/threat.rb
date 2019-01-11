@@ -19,8 +19,8 @@ module Threat
     id
   end
   # Programmatically define aliases for common HTTP methods
-  %i[get post put head].each do |method|
-    define_method("self.#{method}") do |uri, args = {}|
+  %i[get put post patch delete head].each do |method|
+    define_singleton_method(method) do |uri, args = {}|
       request method, uri, args
     end
   end
