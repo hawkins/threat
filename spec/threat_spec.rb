@@ -32,4 +32,10 @@ RSpec.describe Threat do
     expect(Threat::inbox.size).to eq(0)
     expect(Threat::outbox.size).to eq(6)
   end
+
+  it "can wait for a specific request to finish" do
+    id = Threat::get(URL)
+    response = Threat::join(id)
+    expect(response).not_to be(nil)
+  end
 end

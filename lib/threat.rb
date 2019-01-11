@@ -15,6 +15,7 @@ module Threat
 
   def self.request(method, uri, args = {})
     id = SecureRandom.uuid
+    @@inbox_a.push(id)
     @@inbox.push(id: id, method: method, uri: uri, args: args)
     id
   end
@@ -40,29 +41,51 @@ module Threat
     yield CLIENT if block_given?
 
     @@inbox = Queue.new
-    @@store = {}
+    @@inbox_a = [] # TODO: Maybe replace inbox with an Array?
     @@outbox = Queue.new
-    @@threads = []
+    @@store = {}
+    @@threads = {}
+
+    start_scheduler
+  end
+
+  def self.join(id)
+    # First see if we haven't scheduled the request yet
+    while @@inbox_a.include? id
+      sleep(0.001)
+    end
+
+    # Identify the thread and join it
+    thread = @@threads[id]
+    thread.value
   end
 
   private
 
+  @@scheduler = nil
+
   CLIENT = HTTPClient.new
 
-  @@scheduler = Thread.new do
-    loop do
-      # TODO: How can we more effectively not waste too many cycles?
-      sleep(0.1)
+  def self.start_scheduler
+    @@scheduler.kill unless @@scheduler.nil?
 
-      next if @@inbox.empty?
+    @@scheduler = Thread.new do
+      loop do
+        # TODO: How can we more effectively not waste too many cycles?
+        sleep(0.01)
 
-      # TODO: Check rate-limiting
+        next if @@inbox.empty?
 
-      # Spawn an agent if safe to do so
-      @@threads << Thread.new do
-        a = Agent.new
+        # TODO: Check rate-limiting
+
+        # Spawn an agent if safe to do so
         request = @@inbox.pop
-        a.invoke request, @@outbox
+        @@inbox_a.delete(request[:id])
+        thr = Thread.new{
+          a = Agent.new
+          a.invoke request, @@outbox
+        }
+        @@threads[request[:id]] = thr
       end
     end
   end
