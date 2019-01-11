@@ -3,7 +3,8 @@ RSpec.describe Threat do
     expect(Threat::VERSION).not_to be nil
   end
 
-  it "does something useful" do
-    expect(false).to eq(true)
+  it "can queue requests" do
+    Threat::request(:get, "https://github.com/hawkins/threat")
+    expect(Threat::inbox.size).to eq(1)
   end
 end
