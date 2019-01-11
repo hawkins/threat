@@ -1,46 +1,14 @@
-require 'threat/version'
 require 'httpclient'
 require 'securerandom'
 
-##
-# A core ruby Queue with no ability to push or pop elements
-#
-# You can use any method to read status of the queue via this class.
-#
-# I.e.:
-#
-#   queue = Queue.new
-#   queue << 1
-#   queue << 2
-#   q = ReadOnlyQueue.new queue
-#   q.empty?   # false
-#   q.size     # 2
-#   queue.pop  # no method error
-#   queue.push # no method error
-class ReadOnlyQueue
-  def initialize(queue)
-    @queue = queue
-  end
-
-  def closed?
-    @queue.closed?
-  end
-
-  def empty?
-    @queue.empty?
-  end
-
-  def length
-    @queue.length
-  end
-  alias :size :length
-
-  def num_waiting
-    @queue.num_waiting
-  end
-end
+require 'threat/version'
+require 'threat/readonlyqueue'
 
 module Threat
+  @@inbox = Queue.new
+  @@store = {}
+  @@outbox = Queue.new
+
   @@scheduler = Thread.new do
     loop do
       # TODO: How can we more effectively not waste too many cycles?
@@ -52,25 +20,30 @@ module Threat
     end
   end
 
-  CLIENT = HTTPClient.new
-  CLIENT.cookie_manager = nil
-
-  @@inbox = Queue.new
-  @@store = {}
-  @@outbox = Queue.new
-
   def self.inbox
     ReadOnlyQueue.new @@inbox
   end
+
   def self.outbox
     ReadOnlyQueue.new @@outbox
   end
 
-  def self.request(method, uri, args={})
+  def self.request(method, uri, args = {})
     id = SecureRandom.uuid
     @@inbox.push(id: id, method: method, uri: uri, args: args)
     id
   end
+  # Programmatically define aliases for common HTTP methods
+  %i[get post put head].each do |method|
+    define_method("self.#{method}") do |uri, args = {}|
+      request method, uri, args
+    end
+  end
+
+  private
+
+  CLIENT = HTTPClient.new
+  CLIENT.cookie_manager = nil
 
   class Agent
     def initialize
