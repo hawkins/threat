@@ -10,6 +10,10 @@ RSpec.describe Threat do
   end
 
   it "can queue requests" do
+    # TODO: Maybe go back to queue?
+    # This was working fine, but Arrays introduced all sorts of race
+    # conditions, including this scheduling so quickly that the
+    # inbox has already emptied
     Threat::request(:get, URL)
     expect(Threat::inbox.size).to eq(1)
   end
