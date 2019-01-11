@@ -38,4 +38,19 @@ RSpec.describe Threat do
     response = Threat::join(id)
     expect(response).not_to be(nil)
   end
+
+  it "can use join to retrieve results to older requests" do
+    id = Threat::get(URL)
+    Threat::get(URL)
+    Threat::get(URL)
+    Threat::get(URL)
+    Threat::get(URL)
+    Threat::get(URL)
+    Threat::get(URL)
+    Threat::get(URL)
+    Threat::get(URL)
+    Threat::get(URL)
+    response = Threat::join(id)
+    expect(response).not_to be(nil)
+  end
 end
